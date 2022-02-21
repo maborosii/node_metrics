@@ -18,180 +18,125 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
+	"regexp"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/prometheus/common/config"
+	"github.com/prometheus/common/model"
 )
 
-func ExampleAPI_query() {
-	client, err := api.NewClient(api.Config{
-		Address: "http://prometheus:9090",
-	})
-	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
-	}
+// 正则表达式匹配模式 --> 筛选出ip和value
+var pattern = `(?m)ip="(.*?)".*\s=>\s*(\d*\.\d{2}).*$`
 
-	v1api := v1.NewAPI(client)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	result, warnings, err := v1api.Query(ctx, "rate(node_cpu_seconds_total{mode=\"idle\"}[5m])", time.Now())
-	// result, warnings, err := v1api.Query(ctx, "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) by (instance)) * 100", time.Now())
-	if err != nil {
-		fmt.Printf("Error querying Prometheus: %v\n", err)
-		os.Exit(1)
-	}
-	if len(warnings) > 0 {
-		fmt.Printf("Warnings: %v\n", warnings)
-	}
-	fmt.Printf("Result:\n%v\n", result)
+// 保存查询结果, --> 给查询结果打标签
+type QueryResult struct {
+	label string
+	value model.Value
 }
 
-func ExampleAPI_queryRange() {
-	client, err := api.NewClient(api.Config{
-		Address: "http://prometheus:9090",
-	})
-	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
+func NewQueryResult() func(label string, value model.Value) *QueryResult {
+	return func(label string, value model.Value) *QueryResult {
+		return &QueryResult{label: label, value: value}
 	}
-
-	v1api := v1.NewAPI(client)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	r := v1.Range{
-		Start: time.Now().Add(-time.Hour),
-		End:   time.Now(),
-		Step:  time.Minute,
-	}
-	result, warnings, err := v1api.QueryRange(ctx, "rate(prometheus_tsdb_head_samples_appended_total[5m])", r)
-	if err != nil {
-		fmt.Printf("Error querying Prometheus: %v\n", err)
-		os.Exit(1)
-	}
-	if len(warnings) > 0 {
-		fmt.Printf("Warnings: %v\n", warnings)
-	}
-	fmt.Printf("Result:\n%v\n", result)
+}
+func (q *QueryResult) Print() {
+	fmt.Printf("label:%s,\ndata:%v\n", q.label, q.value)
+}
+func (q *QueryResult) GetLabel() string {
+	return q.label
+}
+func (q *QueryResult) GetValue() model.Value {
+	return q.value
 }
 
-type userAgentRoundTripper struct {
-	name string
-	rt   http.RoundTripper
+// 抽取ip，label，value
+func (q *QueryResult) CleanValue() [][]string {
+	var midResult = [][]string{}
+	var re = regexp.MustCompile(pattern)
+	matched := re.FindAllStringSubmatch(q.value.String(), -1)
+	for _, match := range matched {
+		midResult = append(midResult, []string{match[1], match[2]})
+	}
+	return midResult
 }
 
-// RoundTrip implements the http.RoundTripper interface.
-func (u userAgentRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
-	if r.UserAgent() == "" {
-		// The specification of http.RoundTripper says that it shouldn't mutate
-		// the request so make a copy of req.Header since this is all that is
-		// modified.
-		r2 := new(http.Request)
-		*r2 = *r
-		r2.Header = make(http.Header)
-		for k, s := range r.Header {
-			r2.Header[k] = s
+// 结构化查询结果
+type StoreResult struct {
+	ip     string
+	cpuAvg string
+	cpuMax string
+	// memAvg         string
+	// memMax         string
+	// diskUsage      string
+	// diskReadAvg    string
+	// diskReadMax    string
+	// diskWriteAvg   string
+	// diskWriteMax   string
+	// networkIn      string
+	// networkOut     string
+	// contextSwitchs string
+	// sockectNums    string
+}
+
+// 用于灵活构建StoreResult
+type Option func(*StoreResult)
+
+func WithCpuAvg(cpuAvg string) Option {
+	return func(sr *StoreResult) {
+		sr.cpuAvg = cpuAvg
+	}
+}
+func WithCpuMax(cpuMax string) Option {
+	return func(sr *StoreResult) {
+		sr.cpuMax = cpuMax
+	}
+}
+
+// func WithCpuAge(cpuAvg string) Option {
+// 	return func(sr *StoreResult) {
+// 		sr.cpuAvg = cpuAvg
+// 	}
+// }
+func NewStoreResult(ip string, options ...Option) *StoreResult {
+	sr := &StoreResult{ip: ip}
+	for _, option := range options {
+		option(sr)
+	}
+	return sr
+}
+
+func (sr *StoreResult) GetIp() string {
+	return sr.ip
+}
+func (sr *StoreResult) ModifyStoreResult(options ...Option) {
+	for _, option := range options {
+		option(sr)
+	}
+}
+
+type StoreResults []*StoreResult
+
+func NewStoreResults() StoreResults {
+	return []*StoreResult{}
+}
+func (srs StoreResults) FindIp(ip string) (bool, int) {
+	for i, sr := range srs {
+		if sr.GetIp() == ip {
+			return true, i
 		}
-		r2.Header.Set("User-Agent", u.name)
-		r = r2
 	}
-	return u.rt.RoundTrip(r)
+	return false, -1
 }
 
-func ExampleAPI_queryRangeWithUserAgent() {
-	client, err := api.NewClient(api.Config{
-		Address:      "http://prometheus:9090",
-		RoundTripper: userAgentRoundTripper{name: "Client-Golang", rt: api.DefaultRoundTripper},
-	})
-	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
-	}
+var metricsChan = make(chan *QueryResult)
+var notifyChan = make(chan struct{})
+var wgReceiver sync.WaitGroup
+var storeResults = NewStoreResults()
 
-	v1api := v1.NewAPI(client)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	r := v1.Range{
-		Start: time.Now().Add(-time.Hour),
-		End:   time.Now(),
-		Step:  time.Minute,
-	}
-	result, warnings, err := v1api.QueryRange(ctx, "rate(prometheus_tsdb_head_samples_appended_total[5m])", r)
-	if err != nil {
-		fmt.Printf("Error querying Prometheus: %v\n", err)
-		os.Exit(1)
-	}
-	if len(warnings) > 0 {
-		fmt.Printf("Warnings: %v\n", warnings)
-	}
-	fmt.Printf("Result:\n%v\n", result)
-}
-
-func ExampleAPI_queryRangeWithBasicAuth() {
-	client, err := api.NewClient(api.Config{
-		Address: "http://prometheus:9090",
-		// We can use amazing github.com/prometheus/common/config helper!
-		RoundTripper: config.NewBasicAuthRoundTripper("me", "defintely_me", "", api.DefaultRoundTripper),
-	})
-	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
-	}
-
-	v1api := v1.NewAPI(client)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	r := v1.Range{
-		Start: time.Now().Add(-time.Hour),
-		End:   time.Now(),
-		Step:  time.Minute,
-	}
-	result, warnings, err := v1api.QueryRange(ctx, "rate(prometheus_tsdb_head_samples_appended_total[5m])", r)
-	if err != nil {
-		fmt.Printf("Error querying Prometheus: %v\n", err)
-		os.Exit(1)
-	}
-	if len(warnings) > 0 {
-		fmt.Printf("Warnings: %v\n", warnings)
-	}
-	fmt.Printf("Result:\n%v\n", result)
-}
-
-func ExampleAPI_queryRangeWithAuthBearerToken() {
-	client, err := api.NewClient(api.Config{
-		Address: "http://prometheus:9090",
-		// We can use amazing github.com/prometheus/common/config helper!
-		RoundTripper: config.NewAuthorizationCredentialsRoundTripper("Bearer", "secret_token", api.DefaultRoundTripper),
-	})
-	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
-	}
-
-	v1api := v1.NewAPI(client)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	r := v1.Range{
-		Start: time.Now().Add(-time.Hour),
-		End:   time.Now(),
-		Step:  time.Minute,
-	}
-	result, warnings, err := v1api.QueryRange(ctx, "rate(prometheus_tsdb_head_samples_appended_total[5m])", r)
-	if err != nil {
-		fmt.Printf("Error querying Prometheus: %v\n", err)
-		os.Exit(1)
-	}
-	if len(warnings) > 0 {
-		fmt.Printf("Warnings: %v\n", warnings)
-	}
-	fmt.Printf("Result:\n%v\n", result)
-}
-
-func ExampleAPI_series() {
+func ExampleAPI_query(label string, promql string) {
 	client, err := api.NewClient(api.Config{
 		Address: "http://prometheus:9090",
 	})
@@ -203,10 +148,8 @@ func ExampleAPI_series() {
 	v1api := v1.NewAPI(client)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	lbls, warnings, err := v1api.Series(ctx, []string{
-		"{__name__=~\"scrape_.+\",job=\"node\"}",
-		"{__name__=~\"scrape_.+\",job=\"prometheus\"}",
-	}, time.Now().Add(-time.Hour), time.Now())
+	result, warnings, err := v1api.Query(ctx, promql, time.Now())
+
 	if err != nil {
 		fmt.Printf("Error querying Prometheus: %v\n", err)
 		os.Exit(1)
@@ -214,36 +157,75 @@ func ExampleAPI_series() {
 	if len(warnings) > 0 {
 		fmt.Printf("Warnings: %v\n", warnings)
 	}
-	fmt.Println("Result:")
-	for _, lbl := range lbls {
-		fmt.Println(lbl)
+	metricsChan <- NewQueryResult()(label, result)
+	fmt.Println(label)
+	<-notifyChan
+}
+func ShuffleResult() {
+	defer wgReceiver.Done()
+	// storeResults := NewStoreResults()
+	for {
+		queryResult, ok := <-metricsChan
+		fmt.Println("Receiver:", ok)
+		if !ok {
+			// 发送关闭通知到各发送者goroutine
+			close(notifyChan)
+			return
+		}
+		switch queryResult.GetLabel() {
+		case "cpu_usage_avg_percents":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithCpuAvg(result[1]))
+				} else {
+					sr := NewStoreResult(result[0], WithCpuAvg(result[1]))
+					storeResults = append(storeResults, sr)
+				}
+			}
+		case "cpu_usage_max_percents":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithCpuMax(result[1]))
+				} else {
+					sr := NewStoreResult(result[0], WithCpuMax(result[1]))
+					storeResults = append(storeResults, sr)
+				}
+			}
+		// case "cpu_usage_max_percents":
+		// 	fmt.Printf("1")
+		default:
+			fmt.Printf("Default")
+		}
 	}
 }
 
 func main() {
-	fmt.Println("11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
-	ExampleAPI_query()
-	// fmt.Println("22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
-	// ExampleAPI_queryRange()
-	// fmt.Println("33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
-	// ExampleAPI_queryRangeWithUserAgent()
-	// fmt.Println("44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444")
-	// ExampleAPI_queryRangeWithBasicAuth()
-	// fmt.Println("55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555")
-	// ExampleAPI_queryRangeWithAuthBearerToken()
-	// fmt.Println("666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666")
-	// ExampleAPI_series()
-
-	// u := []user{
-	// 	{"a", 19}, {"b", 18}, {"c", 20},
-	// }
-	// n := make([]*user, 0, len(u))
-	// for _, v := range u {
-	// 	tmp := v
-	// 	n = append(n, &tmp)
-	// }
-	// fmt.Println(n)
-	// for _, v := range n {
-	// 	fmt.Println(v)
-	// }
+	promqls := map[string]string{
+		"cpu_usage_avg_percents": "(1-avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))by(ip))*100",
+		"cpu_usage_max_percents": "(1-min_over_time(avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))by(ip)[24h:1s]))*100",
+		// "mem_usage_avg_percents":         "(1-avg_over_time(node_memory_MemAvailable_bytes[24h])/node_memory_MemTotal_bytes)*100",
+		// "mem_usage_max_percents":         "(1-min_over_time(node_memory_MemAvailable_bytes[24h])/node_memory_MemTotal_bytes)*100",
+		// "rootdir_disk_usage_percents":    "(1-node_filesystem_free_bytes{mountpoint=\"/\",fstype=~\"xfs|ext4\"}/node_filesystem_size_bytes{mountpoint=\"/\",fstype=~\"xfs|ext4\"})*100",
+		// "disk_read_speed_avg_KB_persec":  "avg_over_time(rate(node_disk_read_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
+		// "disk_read_speed_max_KB_persec":  "max_over_time(rate(node_disk_read_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
+		// "disk_write_speed_avg_KB_persec": "avg_over_time(rate(node_disk_written_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
+		// "disk_write_speed_max_KB_persec": "max_over_time(rate(node_disk_written_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
+		// "network_in_speed_MB_persec":     "avg_over_time(rate(node_network_receive_bytes_total{device=\"eth0\"}[5m])[24h:1s])/1024/1024",
+		// "network_out_speed_MB_persec":    "avg_over_time(rate(node_network_transmit_bytes_total{device=\"eth0\"}[5m])[24h:1s])/1024/1024",
+		// "context_switches_persec":        "rate(node_context_switches_total[5m])",
+		// "socket_nums_K":                  "node_sockstat_sockets_used/1000",
+	}
+	for label, sql := range promqls {
+		go func(label, sql string) {
+			ExampleAPI_query(label, sql)
+		}(label, sql)
+	}
+	wgReceiver.Add(1)
+	go ShuffleResult()
+	wgReceiver.Wait()
+	fmt.Println(storeResults)
 }
