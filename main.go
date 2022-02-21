@@ -161,17 +161,17 @@ func ExampleAPI_query(label string, promql string) {
 	fmt.Println(label)
 	<-notifyChan
 }
-func ShuffleResult() {
+func ShuffleResult(series int) {
 	defer wgReceiver.Done()
 	// storeResults := NewStoreResults()
-	for {
+	for i := 0; i < series; i++ {
 		queryResult, ok := <-metricsChan
 		fmt.Println("Receiver:", ok)
-		if !ok {
-			// 发送关闭通知到各发送者goroutine
-			close(notifyChan)
-			return
-		}
+		// if !ok {
+		// 	// 发送关闭通知到各发送者goroutine
+		// 	close(notifyChan)
+		// 	return
+		// }
 		switch queryResult.GetLabel() {
 		case "cpu_usage_avg_percents":
 			results := queryResult.CleanValue()
@@ -201,6 +201,7 @@ func ShuffleResult() {
 			fmt.Printf("Default")
 		}
 	}
+	close(notifyChan)
 }
 
 func main() {
@@ -225,7 +226,10 @@ func main() {
 		}(label, sql)
 	}
 	wgReceiver.Add(1)
-	go ShuffleResult()
+	go ShuffleResult(len(promqls))
 	wgReceiver.Wait()
-	fmt.Println(storeResults)
+	for _, n := range storeResults {
+		fmt.Println(*n)
+
+	}
 }
