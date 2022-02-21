@@ -1,6 +1,5 @@
 // Copyright 2019 The Prometheus Authors
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
+// Licensed under the Apache License, Version 2.0 (the "License"); // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
@@ -65,20 +64,20 @@ func (q *QueryResult) CleanValue() [][]string {
 
 // 结构化查询结果
 type StoreResult struct {
-	ip     string
-	cpuAvg string
-	cpuMax string
-	// memAvg         string
-	// memMax         string
-	// diskUsage      string
-	// diskReadAvg    string
-	// diskReadMax    string
-	// diskWriteAvg   string
-	// diskWriteMax   string
-	// networkIn      string
-	// networkOut     string
-	// contextSwitchs string
-	// sockectNums    string
+	ip             string
+	cpuAvg         string
+	cpuMax         string
+	memAvg         string
+	memMax         string
+	diskUsage      string
+	diskReadAvg    string
+	diskReadMax    string
+	diskWriteAvg   string
+	diskWriteMax   string
+	networkIn      string
+	networkOut     string
+	contextSwitchs string
+	socketNums     string
 }
 
 // 用于灵活构建StoreResult
@@ -92,6 +91,61 @@ func WithCpuAvg(cpuAvg string) Option {
 func WithCpuMax(cpuMax string) Option {
 	return func(sr *StoreResult) {
 		sr.cpuMax = cpuMax
+	}
+}
+func WithMemAvg(memAvg string) Option {
+	return func(sr *StoreResult) {
+		sr.memAvg = memAvg
+	}
+}
+func WithMemMax(memMax string) Option {
+	return func(sr *StoreResult) {
+		sr.memMax = memMax
+	}
+}
+func WithDiskUsage(diskUsage string) Option {
+	return func(sr *StoreResult) {
+		sr.diskUsage = diskUsage
+	}
+}
+func WithDiskReadAvg(diskReadAvg string) Option {
+	return func(sr *StoreResult) {
+		sr.diskReadAvg = diskReadAvg
+	}
+}
+func WithDiskWriteAvg(diskWriteAvg string) Option {
+	return func(sr *StoreResult) {
+		sr.diskWriteAvg = diskWriteAvg
+	}
+}
+func WithDiskReadMax(diskReadMax string) Option {
+	return func(sr *StoreResult) {
+		sr.diskReadMax = diskReadMax
+	}
+}
+func WithDiskWriteMax(diskWriteMax string) Option {
+	return func(sr *StoreResult) {
+		sr.diskWriteMax = diskWriteMax
+	}
+}
+func WithNetworkIn(networkIn string) Option {
+	return func(sr *StoreResult) {
+		sr.networkIn = networkIn
+	}
+}
+func WithNetworkOut(networkOut string) Option {
+	return func(sr *StoreResult) {
+		sr.networkOut = networkOut
+	}
+}
+func WithContextSwitchs(contextSwitchs string) Option {
+	return func(sr *StoreResult) {
+		sr.contextSwitchs = contextSwitchs
+	}
+}
+func WithSocketNums(socketNums string) Option {
+	return func(sr *StoreResult) {
+		sr.socketNums = socketNums
 	}
 }
 
@@ -178,9 +232,9 @@ func ShuffleResult(series int) {
 			for _, result := range results {
 				ok, index := storeResults.FindIp(result[0])
 				if ok {
-					storeResults[index].ModifyStoreResult(WithCpuAvg(result[1]))
+					storeResults[index].ModifyStoreResult(WithCpuAvg(result[1] + "%"))
 				} else {
-					sr := NewStoreResult(result[0], WithCpuAvg(result[1]))
+					sr := NewStoreResult(result[0], WithCpuAvg(result[1]+"%"))
 					storeResults = append(storeResults, sr)
 				}
 			}
@@ -189,14 +243,136 @@ func ShuffleResult(series int) {
 			for _, result := range results {
 				ok, index := storeResults.FindIp(result[0])
 				if ok {
-					storeResults[index].ModifyStoreResult(WithCpuMax(result[1]))
+					storeResults[index].ModifyStoreResult(WithCpuMax(result[1] + "%"))
 				} else {
-					sr := NewStoreResult(result[0], WithCpuMax(result[1]))
+					sr := NewStoreResult(result[0], WithCpuMax(result[1]+"%"))
 					storeResults = append(storeResults, sr)
 				}
 			}
-		// case "cpu_usage_max_percents":
-		// 	fmt.Printf("1")
+		case "mem_usage_avg_percents":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithMemAvg(result[1] + "%"))
+				} else {
+					sr := NewStoreResult(result[0], WithMemAvg(result[1]+"%"))
+					storeResults = append(storeResults, sr)
+				}
+			}
+		case "mem_usage_max_percents":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithMemMax(result[1] + "%"))
+				} else {
+					sr := NewStoreResult(result[0], WithMemMax(result[1]+"%"))
+					storeResults = append(storeResults, sr)
+				}
+			}
+
+		case "rootdir_disk_usage_percents":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithDiskUsage(result[1] + "%"))
+				} else {
+					sr := NewStoreResult(result[0], WithDiskUsage(result[1]+"%"))
+					storeResults = append(storeResults, sr)
+				}
+			}
+
+		case "disk_read_speed_avg_KB_persec":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithDiskReadAvg(result[1] + "KB/s"))
+				} else {
+					sr := NewStoreResult(result[0], WithDiskReadAvg(result[1]+"KB/s"))
+					storeResults = append(storeResults, sr)
+				}
+			}
+		case "disk_read_speed_max_KB_persec":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithDiskReadMax(result[1] + "KB/s"))
+				} else {
+					sr := NewStoreResult(result[0], WithDiskReadMax(result[1]+"KB/s"))
+					storeResults = append(storeResults, sr)
+				}
+			}
+
+		case "disk_write_speed_avg_KB_persec":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithDiskWriteAvg(result[1] + "KB/s"))
+				} else {
+					sr := NewStoreResult(result[0], WithDiskWriteAvg(result[1]+"KB/s"))
+					storeResults = append(storeResults, sr)
+				}
+			}
+		case "disk_write_speed_max_KB_persec":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithDiskWriteMax(result[1] + "KB/s"))
+				} else {
+					sr := NewStoreResult(result[0], WithDiskWriteMax(result[1]+"KB/s"))
+					storeResults = append(storeResults, sr)
+				}
+			}
+		case "network_in_speed_MB_persec":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithNetworkIn(result[1] + "MB/s"))
+				} else {
+					sr := NewStoreResult(result[0], WithNetworkIn(result[1]+"MB/s"))
+					storeResults = append(storeResults, sr)
+				}
+			}
+		case "network_out_speed_MB_persec":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithNetworkOut(result[1] + "MB/s"))
+				} else {
+					sr := NewStoreResult(result[0], WithNetworkOut(result[1]+"MB/s"))
+					storeResults = append(storeResults, sr)
+				}
+			}
+		case "context_switches_persec":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithContextSwitchs(result[1]))
+				} else {
+					sr := NewStoreResult(result[0], WithContextSwitchs(result[1]))
+					storeResults = append(storeResults, sr)
+				}
+			}
+		case "socket_nums_K":
+			results := queryResult.CleanValue()
+			for _, result := range results {
+				ok, index := storeResults.FindIp(result[0])
+				if ok {
+					storeResults[index].ModifyStoreResult(WithSocketNums(result[1] + "K"))
+				} else {
+					sr := NewStoreResult(result[0], WithSocketNums(result[1]+"K"))
+					storeResults = append(storeResults, sr)
+				}
+			}
 		default:
 			fmt.Printf("Default")
 		}
@@ -206,19 +382,19 @@ func ShuffleResult(series int) {
 
 func main() {
 	promqls := map[string]string{
-		"cpu_usage_avg_percents": "(1-avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))by(ip))*100",
-		"cpu_usage_max_percents": "(1-min_over_time(avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))by(ip)[24h:1s]))*100",
-		// "mem_usage_avg_percents":         "(1-avg_over_time(node_memory_MemAvailable_bytes[24h])/node_memory_MemTotal_bytes)*100",
-		// "mem_usage_max_percents":         "(1-min_over_time(node_memory_MemAvailable_bytes[24h])/node_memory_MemTotal_bytes)*100",
-		// "rootdir_disk_usage_percents":    "(1-node_filesystem_free_bytes{mountpoint=\"/\",fstype=~\"xfs|ext4\"}/node_filesystem_size_bytes{mountpoint=\"/\",fstype=~\"xfs|ext4\"})*100",
-		// "disk_read_speed_avg_KB_persec":  "avg_over_time(rate(node_disk_read_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
-		// "disk_read_speed_max_KB_persec":  "max_over_time(rate(node_disk_read_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
-		// "disk_write_speed_avg_KB_persec": "avg_over_time(rate(node_disk_written_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
-		// "disk_write_speed_max_KB_persec": "max_over_time(rate(node_disk_written_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
-		// "network_in_speed_MB_persec":     "avg_over_time(rate(node_network_receive_bytes_total{device=\"eth0\"}[5m])[24h:1s])/1024/1024",
-		// "network_out_speed_MB_persec":    "avg_over_time(rate(node_network_transmit_bytes_total{device=\"eth0\"}[5m])[24h:1s])/1024/1024",
-		// "context_switches_persec":        "rate(node_context_switches_total[5m])",
-		// "socket_nums_K":                  "node_sockstat_sockets_used/1000",
+		"cpu_usage_avg_percents":         "(1-avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))by(ip))*100",
+		"cpu_usage_max_percents":         "(1-min_over_time(avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))by(ip)[24h:1s]))*100",
+		"mem_usage_avg_percents":         "(1-avg_over_time(node_memory_MemAvailable_bytes[24h])/node_memory_MemTotal_bytes)*100",
+		"mem_usage_max_percents":         "(1-min_over_time(node_memory_MemAvailable_bytes[24h])/node_memory_MemTotal_bytes)*100",
+		"rootdir_disk_usage_percents":    "(1-node_filesystem_free_bytes{mountpoint=\"/\",fstype=~\"xfs|ext4\"}/node_filesystem_size_bytes{mountpoint=\"/\",fstype=~\"xfs|ext4\"})*100",
+		"disk_read_speed_avg_KB_persec":  "avg_over_time(rate(node_disk_read_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
+		"disk_read_speed_max_KB_persec":  "max_over_time(rate(node_disk_read_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
+		"disk_write_speed_avg_KB_persec": "avg_over_time(rate(node_disk_written_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
+		"disk_write_speed_max_KB_persec": "max_over_time(rate(node_disk_written_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
+		"network_in_speed_MB_persec":     "avg_over_time(rate(node_network_receive_bytes_total{device=\"eth0\"}[5m])[24h:1s])/1024/1024",
+		"network_out_speed_MB_persec":    "avg_over_time(rate(node_network_transmit_bytes_total{device=\"eth0\"}[5m])[24h:1s])/1024/1024",
+		"context_switches_persec":        "rate(node_context_switches_total[5m])",
+		"socket_nums_K":                  "node_sockstat_sockets_used/1000",
 	}
 	for label, sql := range promqls {
 		go func(label, sql string) {
@@ -230,6 +406,5 @@ func main() {
 	wgReceiver.Wait()
 	for _, n := range storeResults {
 		fmt.Println(*n)
-
 	}
 }
