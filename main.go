@@ -22,13 +22,17 @@ import (
 	"sync"
 	"time"
 
+	"node_metrics/excelops/excelwriting"
+	. "node_metrics/locallog"
+
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	"github.com/xuri/excelize/v2"
 )
 
 // 正则表达式匹配模式 --> 筛选出ip和value
-var pattern = `(?m)ip="(.*?)".*\s=>\s*(\d*\.\d{2}).*$`
+var pattern = `(?m)ip="(.*?)".*\s=>\s*(\d*\.?\d{0,2}).*$`
 
 // 保存查询结果, --> 给查询结果打标签
 type QueryResult struct {
@@ -149,11 +153,6 @@ func WithSocketNums(socketNums string) Option {
 	}
 }
 
-// func WithCpuAge(cpuAvg string) Option {
-// 	return func(sr *StoreResult) {
-// 		sr.cpuAvg = cpuAvg
-// 	}
-// }
 func NewStoreResult(ip string, options ...Option) *StoreResult {
 	sr := &StoreResult{ip: ip}
 	for _, option := range options {
@@ -165,9 +164,31 @@ func NewStoreResult(ip string, options ...Option) *StoreResult {
 func (sr *StoreResult) GetIp() string {
 	return sr.ip
 }
+func (sr *StoreResult) Print() {
+	fmt.Printf("\n#######\nip: %s\ncpuAvg: %s\ncpuMax: %s\nmemAvg: %s\nmemMax: %s\ndiskUsage: %s\ndiskReadAvg: %s\ndiskReadMax: %s\ndiskWriteAvg: %s\ndiskWriteMax: %s\nnetworkIn: %s\nnetworkOut: %s\ncontextSwitchs: %s\nsocketNums: %s\n", sr.ip, sr.cpuAvg, sr.cpuMax, sr.memAvg, sr.memMax, sr.diskUsage, sr.diskReadAvg, sr.diskReadMax, sr.diskWriteAvg, sr.diskWriteMax, sr.networkIn, sr.networkOut, sr.contextSwitchs, sr.socketNums)
+}
 func (sr *StoreResult) ModifyStoreResult(options ...Option) {
 	for _, option := range options {
 		option(sr)
+	}
+}
+func (sr *StoreResult) ConvertToSlice() []string {
+	// 这里可以使用反射，但为了保证生成的slice的有序性
+	return []string{
+		sr.ip,
+		sr.cpuAvg,
+		sr.cpuMax,
+		sr.memAvg,
+		sr.memMax,
+		sr.diskUsage,
+		sr.diskReadAvg,
+		sr.diskReadMax,
+		sr.diskWriteAvg,
+		sr.diskWriteMax,
+		sr.networkIn,
+		sr.networkOut,
+		sr.contextSwitchs,
+		sr.socketNums,
 	}
 }
 
@@ -183,6 +204,16 @@ func (srs StoreResults) FindIp(ip string) (bool, int) {
 		}
 	}
 	return false, -1
+}
+
+func CreateOrModifyStorResults(ip string, srs StoreResults, option Option) {
+	ok, index := storeResults.FindIp(ip)
+	if ok {
+		storeResults[index].ModifyStoreResult(option)
+	} else {
+		sr := NewStoreResult(ip, option)
+		storeResults = append(storeResults, sr)
+	}
 }
 
 var metricsChan = make(chan *QueryResult)
@@ -221,160 +252,38 @@ func ShuffleResult(series int) {
 	for i := 0; i < series; i++ {
 		queryResult, ok := <-metricsChan
 		fmt.Println("Receiver:", ok)
-		// if !ok {
-		// 	// 发送关闭通知到各发送者goroutine
-		// 	close(notifyChan)
-		// 	return
-		// }
-		switch queryResult.GetLabel() {
-		case "cpu_usage_avg_percents":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithCpuAvg(result[1] + "%"))
-				} else {
-					sr := NewStoreResult(result[0], WithCpuAvg(result[1]+"%"))
-					storeResults = append(storeResults, sr)
-				}
+		results := queryResult.CleanValue()
+		for _, result := range results {
+			switch queryResult.GetLabel() {
+			case "cpu_usage_avg_percents":
+				CreateOrModifyStorResults(result[0], storeResults, WithCpuAvg(result[1]+"%"))
+			case "cpu_usage_max_percents":
+				CreateOrModifyStorResults(result[0], storeResults, WithCpuMax(result[1]+"%"))
+			case "mem_usage_avg_percents":
+				CreateOrModifyStorResults(result[0], storeResults, WithMemAvg(result[1]+"%"))
+			case "mem_usage_max_percents":
+				CreateOrModifyStorResults(result[0], storeResults, WithMemMax(result[1]+"%"))
+			case "rootdir_disk_usage_percents":
+				CreateOrModifyStorResults(result[0], storeResults, WithDiskUsage(result[1]+"%"))
+			case "disk_read_speed_avg_KB_persec":
+				CreateOrModifyStorResults(result[0], storeResults, WithDiskReadAvg(result[1]+"KB/s"))
+			case "disk_read_speed_max_KB_persec":
+				CreateOrModifyStorResults(result[0], storeResults, WithDiskReadMax(result[1]+"KB/s"))
+			case "disk_write_speed_avg_KB_persec":
+				CreateOrModifyStorResults(result[0], storeResults, WithDiskWriteAvg(result[1]+"KB/s"))
+			case "disk_write_speed_max_KB_persec":
+				CreateOrModifyStorResults(result[0], storeResults, WithDiskWriteMax(result[1]+"KB/s"))
+			case "network_in_speed_MB_persec":
+				CreateOrModifyStorResults(result[0], storeResults, WithNetworkIn(result[1]+"MB/s"))
+			case "network_out_speed_MB_persec":
+				CreateOrModifyStorResults(result[0], storeResults, WithNetworkOut(result[1]+"MB/s"))
+			case "context_switches_persec_K":
+				CreateOrModifyStorResults(result[0], storeResults, WithContextSwitchs(result[1]+"K"))
+			case "socket_nums_K":
+				CreateOrModifyStorResults(result[0], storeResults, WithSocketNums(result[1]+"K"))
+			default:
+				fmt.Printf("Default")
 			}
-		case "cpu_usage_max_percents":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithCpuMax(result[1] + "%"))
-				} else {
-					sr := NewStoreResult(result[0], WithCpuMax(result[1]+"%"))
-					storeResults = append(storeResults, sr)
-				}
-			}
-		case "mem_usage_avg_percents":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithMemAvg(result[1] + "%"))
-				} else {
-					sr := NewStoreResult(result[0], WithMemAvg(result[1]+"%"))
-					storeResults = append(storeResults, sr)
-				}
-			}
-		case "mem_usage_max_percents":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithMemMax(result[1] + "%"))
-				} else {
-					sr := NewStoreResult(result[0], WithMemMax(result[1]+"%"))
-					storeResults = append(storeResults, sr)
-				}
-			}
-
-		case "rootdir_disk_usage_percents":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithDiskUsage(result[1] + "%"))
-				} else {
-					sr := NewStoreResult(result[0], WithDiskUsage(result[1]+"%"))
-					storeResults = append(storeResults, sr)
-				}
-			}
-
-		case "disk_read_speed_avg_KB_persec":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithDiskReadAvg(result[1] + "KB/s"))
-				} else {
-					sr := NewStoreResult(result[0], WithDiskReadAvg(result[1]+"KB/s"))
-					storeResults = append(storeResults, sr)
-				}
-			}
-		case "disk_read_speed_max_KB_persec":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithDiskReadMax(result[1] + "KB/s"))
-				} else {
-					sr := NewStoreResult(result[0], WithDiskReadMax(result[1]+"KB/s"))
-					storeResults = append(storeResults, sr)
-				}
-			}
-
-		case "disk_write_speed_avg_KB_persec":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithDiskWriteAvg(result[1] + "KB/s"))
-				} else {
-					sr := NewStoreResult(result[0], WithDiskWriteAvg(result[1]+"KB/s"))
-					storeResults = append(storeResults, sr)
-				}
-			}
-		case "disk_write_speed_max_KB_persec":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithDiskWriteMax(result[1] + "KB/s"))
-				} else {
-					sr := NewStoreResult(result[0], WithDiskWriteMax(result[1]+"KB/s"))
-					storeResults = append(storeResults, sr)
-				}
-			}
-		case "network_in_speed_MB_persec":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithNetworkIn(result[1] + "MB/s"))
-				} else {
-					sr := NewStoreResult(result[0], WithNetworkIn(result[1]+"MB/s"))
-					storeResults = append(storeResults, sr)
-				}
-			}
-		case "network_out_speed_MB_persec":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithNetworkOut(result[1] + "MB/s"))
-				} else {
-					sr := NewStoreResult(result[0], WithNetworkOut(result[1]+"MB/s"))
-					storeResults = append(storeResults, sr)
-				}
-			}
-		case "context_switches_persec":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithContextSwitchs(result[1]))
-				} else {
-					sr := NewStoreResult(result[0], WithContextSwitchs(result[1]))
-					storeResults = append(storeResults, sr)
-				}
-			}
-		case "socket_nums_K":
-			results := queryResult.CleanValue()
-			for _, result := range results {
-				ok, index := storeResults.FindIp(result[0])
-				if ok {
-					storeResults[index].ModifyStoreResult(WithSocketNums(result[1] + "K"))
-				} else {
-					sr := NewStoreResult(result[0], WithSocketNums(result[1]+"K"))
-					storeResults = append(storeResults, sr)
-				}
-			}
-		default:
-			fmt.Printf("Default")
 		}
 	}
 	close(notifyChan)
@@ -393,7 +302,7 @@ func main() {
 		"disk_write_speed_max_KB_persec": "max_over_time(rate(node_disk_written_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024",
 		"network_in_speed_MB_persec":     "avg_over_time(rate(node_network_receive_bytes_total{device=\"eth0\"}[5m])[24h:1s])/1024/1024",
 		"network_out_speed_MB_persec":    "avg_over_time(rate(node_network_transmit_bytes_total{device=\"eth0\"}[5m])[24h:1s])/1024/1024",
-		"context_switches_persec":        "rate(node_context_switches_total[5m])",
+		"context_switches_persec_K":      "rate(node_context_switches_total[5m])/1000",
 		"socket_nums_K":                  "node_sockstat_sockets_used/1000",
 	}
 	for label, sql := range promqls {
@@ -405,6 +314,20 @@ func main() {
 	go ShuffleResult(len(promqls))
 	wgReceiver.Wait()
 	for _, n := range storeResults {
-		fmt.Println(*n)
+		n.Print()
+	}
+	sheetname := "Sheet1"
+	savexlsx := "巡检报告.xlsx"
+
+	f := excelize.NewFile()
+	index := f.NewSheet(sheetname)
+	writeResults := [][]string{}
+	for _, sr := range storeResults {
+		writeResults = append(writeResults, sr.ConvertToSlice())
+	}
+	excelwriting.WriteExcel(f, sheetname, writeResults)
+	f.SetActiveSheet(index)
+	if err := f.SaveAs(savexlsx); err != nil {
+		Log.Fatal(err)
 	}
 }

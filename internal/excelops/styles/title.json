@@ -1,0 +1,34 @@
+{
+    "border": [
+        {
+            "type": "left",
+            "color": "000000",
+            "style": 1
+        },
+        {
+            "type": "top",
+            "color": "000000",
+            "style": 1
+        },
+        {
+            "type": "bottom",
+            "color": "000000",
+            "style": 1
+        },
+        {
+            "type": "right",
+            "color": "000000",
+            "style": 1
+        }
+    ],
+    "alignment": {
+        "horizontal": "center",
+        "vertical": "center"
+    },
+    "font": {
+        "bold": true,
+        "family": "Microsoft YaHei",
+        "size": 11,
+        "color": "#000000"
+    }
+}
