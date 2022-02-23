@@ -1,15 +1,23 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	config "node_metrics_go/conf"
 	"node_metrics_go/internal/etl"
 	"node_metrics_go/internal/excelops"
 	. "node_metrics_go/pkg/log"
+	"os"
 
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/q191201771/naza/pkg/bininfo"
 	"github.com/xuri/excelize/v2"
 )
 
 func main() {
+
+	config.GetVersion()
+
 	// 存储最终指标
 	var storeResults = etl.NewStoreResults()
 
@@ -41,5 +49,13 @@ func main() {
 	f.SetActiveSheet(index)
 	if err := f.SaveAs(excelops.SaveXlsx); err != nil {
 		Log.Fatal("save excel file occur err, err info: ", err)
+	}
+
+	// 添加编译信息
+	v := flag.Bool("v", false, "show bin info")
+	flag.Parse()
+	if *v {
+		_, _ = fmt.Fprint(os.Stderr, bininfo.StringifyMultiLine())
+		os.Exit(1)
 	}
 }
