@@ -29,6 +29,7 @@ require (
 )
 
 require (
+	github.com/golang/mock v1.6.0
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/xuri/excelize/v2 v2.5.0

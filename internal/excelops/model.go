@@ -82,7 +82,7 @@ func (cl *Cell) SetFormat(sheetname string, f *excelize.File) {
 func (cl *Cell) SetValue(sheetname string, f *excelize.File) {
 	err := f.SetCellValue(sheetname, cl.Xzone[0]+strconv.Itoa(cl.Yzone[0]), cl.Content)
 	if err != nil {
-		Log.Fatal("when setting value of cell occur error, error info: ", err)
+		Log.Fatal("when setting format of cell occur error, error info: ", err)
 	}
 }
 

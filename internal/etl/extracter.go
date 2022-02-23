@@ -2,7 +2,6 @@ package etl
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"time"
 
@@ -69,6 +68,6 @@ func QueryFromProm(label string, promql string, api v1.API) {
 		Log.Warning("Warnings: %v\n", warnings)
 	}
 	metricsChan <- NewQueryResult()(label, result)
-	fmt.Println(label)
+	Log.Info("label: ", label, " has been gotten")
 	<-notifyChan
 }
