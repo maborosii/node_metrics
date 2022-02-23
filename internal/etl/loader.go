@@ -100,7 +100,7 @@ func (sr *StoreResult) GetIp() string {
 	return sr.ip
 }
 func (sr *StoreResult) Print() string {
-	return fmt.Sprintf("#\tip: %s\tcpuAvg: %s\tcpuMax: %s\tmemAvg: %s\tmemMax: %s\tdiskUsage: %s\tdiskReadAvg: %s\tdiskReadMax: %s\tdiskWriteAvg: %s\tdiskWriteMax: %s\tnetworkIn: %s\tnetworkOut: %s\tcontextSwitchs: %s\tsocketNums: %s\t", sr.ip, sr.cpuAvg, sr.cpuMax, sr.memAvg, sr.memMax, sr.diskUsage, sr.diskReadAvg, sr.diskReadMax, sr.diskWriteAvg, sr.diskWriteMax, sr.networkIn, sr.networkOut, sr.contextSwitchs, sr.socketNums)
+	return fmt.Sprintf("## ip: %s,cpuAvg: %s,cpuMax: %s,memAvg: %s,memMax: %s,diskUsage: %s,diskReadAvg: %s,diskReadMax: %s,diskWriteAvg: %s,diskWriteMax: %s,networkIn: %s,networkOut: %s,contextSwitchs: %s,socketNums: %s,", sr.ip, sr.cpuAvg, sr.cpuMax, sr.memAvg, sr.memMax, sr.diskUsage, sr.diskReadAvg, sr.diskReadMax, sr.diskWriteAvg, sr.diskWriteMax, sr.networkIn, sr.networkOut, sr.contextSwitchs, sr.socketNums)
 }
 func (sr *StoreResult) ModifyStoreResult(options ...Option) {
 	for _, option := range options {

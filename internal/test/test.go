@@ -13,7 +13,7 @@
 
 // Package v1_test provides examples making requests to Prometheus using the
 // Golang client.
-package main
+package test
 
 import (
 	"context"

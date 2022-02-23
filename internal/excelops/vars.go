@@ -1,8 +1,11 @@
 package excelops
 
+import _ "embed"
+
 var (
 	SaveXlsx  = "巡检报告.xlsx"
 	Sheetname = "Sheet1"
+
 	//go:embed styles/title.json
 	titleStyle string
 
