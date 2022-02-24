@@ -1,0 +1,3 @@
+{"level":"DEBUG","time":"2022-02-24T22:05:45.234+0800","caller":"node_metrics/main.go:19","msg":"大家好，日志展示"}
+{"level":"DEBUG","time":"2022-02-24T22:12:33.249+0800","caller":"node_metrics/main.go:25","msg":"大家好，日志展示"}
+{"level":"INFO","time":"2022-02-24T22:12:33.249+0800","caller":"test/111.go:6","msg":"test"}

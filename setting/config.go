@@ -40,9 +40,9 @@ func (conf *MonitorConfig) GetOutputTitle() []string {
 	return conf.Output.Title
 }
 
-// func (conf *MonitorConfig) GetLogConfig() *LogConf {
-// 	return conf.LogConfig
-// }
+func (conf *MonitorConfig) GetLogConfig() *LogConf {
+	return conf.LogConfig
+}
 
 func NewMonitorConfig() *MonitorConfig {
 	return &MonitorConfig{}
