@@ -15,7 +15,7 @@ var Pattern = `(?m)ip="(.*?)".*\s=>\s*(\d*\.?\d{0,2}).*$`
 var Address = "http://prometheus:9090"
 var timeOut = 20 * time.Second
 var Promqls = map[string]string{
-	"cpu_usage_avg_percents":         "(1-avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))by(ip))*100",
+	"cpu_usage_avg_percents":         "(1-avg(rate(node_cpu_seconds_total{mode=\"idle\"}[24h]))by(ip))*100",
 	"cpu_usage_max_percents":         "(1-min_over_time(avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))by(ip)[24h:1s]))*100",
 	"mem_usage_avg_percents":         "(1-avg_over_time(node_memory_MemAvailable_bytes[24h])/node_memory_MemTotal_bytes)*100",
 	"mem_usage_max_percents":         "(1-min_over_time(node_memory_MemAvailable_bytes[24h])/node_memory_MemTotal_bytes)*100",
