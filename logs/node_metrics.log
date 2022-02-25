@@ -4,3 +4,4 @@
 {"level":"INFO","time":"2022-02-25T10:11:22.494+0800","caller":"node_metrics_go/main.go:46","msg":"test"}
 {"level":"INFO","time":"2022-02-25T11:48:29.139+0800","caller":"node_metrics_go/main.go:49","msg":"test:","a":"1"}
 {"level":"INFO","time":"2022-02-25T11:48:59.191+0800","caller":"node_metrics_go/main.go:49","msg":"test:%s\n","a":"1"}
+{"level":"FATAL","time":"2022-02-25T15:00:46.658+0800","caller":"etl/extracter.go:66","msg":"Error querying Prometheus: ","error":"Post \"http://prometheus:9090/api/v1/query\": dial tcp: lookup prometheus on 223.5.5.5:53: no such host"}

@@ -84,7 +84,7 @@ func main() {
 	}
 	// 写入数据
 	f := excelize.NewFile()
-	sheetname, filename := global.MonitorSetting.GetOutputFileAndSheetName()
+	filename, sheetname := global.MonitorSetting.GetOutputFileAndSheetName()
 	index := f.NewSheet(sheetname)
 
 	excelops.WriteExcel(f, sheetname, global.MonitorSetting.GetOutputTitle(), writeResults)

@@ -28,11 +28,11 @@ LDFlags=" \
 "
 
 ROOT_DIR=$(pwd)
-BIN_DIR=${ROOT_DIR}/cmd/bin
+BIN_DIR=${ROOT_DIR}/bin
 
 # 如果可执行程序输出目录不存在，则创建
 if [ ! -d ${BIN_DIR} ]; then
-  cd ${ROOT_DIR} && mkdir -p cmd/bin
+  cd ${ROOT_DIR} && mkdir -p bin
 fi
 
 # 编译多个可执行程序
@@ -44,20 +44,22 @@ fi
 #   echo 'build done.'
 
 # 获取构建程序列表
-apps=$(cd ${ROOT_DIR}/cmd && find . -maxdepth 1 -type d ! -path ./bin -a ! -path . | cut -d"/" -f2)
+# apps=$(cd ${ROOT_DIR}/cmd && find . -maxdepth 1 -type d ! -path ./bin -a ! -path . | cut -d"/" -f2)
+dir=$(pwd)
+apps=${dir##*/}
 
 for app in ${apps}; do
   echo "START BUILD APP: ${app}"
-  cd ${ROOT_DIR}/cmd/${app}
+  cd ${ROOT_DIR}/
   # 关闭CGO，静态编译，用于生成能在alpine中使用的二进制文件
-  CGO_ENABLED=0 go build -ldflags "$LDFlags" -o ${BIN_DIR}/${app}
+  CGO_ENABLED=0 go build -ldflags "$LDFlags" -o ${BIN_DIR}
   echo "${app} BUILD DONE"
   echo "PRINT INFO  APP: ${app}"
   echo "-----------------INFO---------------------"
   cd ${BIN_DIR}
   # 压缩二进制文件
   upx ./${app}
-  ./${app} -v
+  ./${app} version
   echo "------------------------------------------"
   echo "******************************************"
 done
