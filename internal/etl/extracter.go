@@ -5,11 +5,12 @@ import (
 	"regexp"
 	"time"
 
-	. "node_metrics_go/pkg/log"
+	"node_metrics_go/global"
 
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	"go.uber.org/zap"
 )
 
 type QueryResult struct {
@@ -50,24 +51,24 @@ func ClientForProm(address string) v1.API {
 		Address: address,
 	})
 	if err != nil {
-		Log.Fatal("Error creating client: %v\n", err)
+		global.Logger.Fatal("Error creating client: ", zap.Error(err))
 	}
 	v1api := v1.NewAPI(client)
 	return v1api
 }
 
 func QueryFromProm(label string, promql string, api v1.API) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeOut)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(global.MonitorSetting.GetTimeOut())*time.Second)
 	defer cancel()
 	result, warnings, err := api.Query(ctx, promql, time.Now())
 
 	if err != nil {
-		Log.Fatal("Error querying Prometheus: %v\n", err)
+		global.Logger.Fatal("Error querying Prometheus: ", zap.Error(err))
 	}
 	if len(warnings) > 0 {
-		Log.Warning("Warnings: %v\n", warnings)
+		global.Logger.Warn("warning ", zap.Any("warnings: ", warnings))
 	}
 	metricsChan <- NewQueryResult()(label, result)
-	Log.Info("label: ", label, " has been gotten")
+	global.Logger.Info("metics gotten", zap.String("label", label))
 	<-notifyChan
 }

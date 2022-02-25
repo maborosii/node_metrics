@@ -1,0 +1,69 @@
+address = "http://prometheus:9090"
+timeout = 20
+
+[[items]]
+metrics = "cpu_usage_avg_percents"
+promql = "(1-avg(rate(node_cpu_seconds_total{mode=\"idle\"}[24h]))by(ip))*100"
+
+[[items]]
+metrics = "cpu_usage_max_percents"
+promql = "(1-min_over_time(avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))by(ip)[24h:1s]))*100"
+
+[[items]]
+metrics = "mem_usage_avg_percents"
+promql = "(1-avg_over_time(node_memory_MemAvailable_bytes[24h])/node_memory_MemTotal_bytes)*100"
+
+[[items]]
+metrics = "mem_usage_max_percents"
+promql = "(1-min_over_time(node_memory_MemAvailable_bytes[24h])/node_memory_MemTotal_bytes)*100"
+
+[[items]]
+metrics = "rootdir_disk_usage_percents"
+promql = "(1-node_filesystem_free_bytes{mountpoint=\"/\",fstype=~\"xfs|ext4\"}/node_filesystem_size_bytes{mountpoint=\"/\",fstype=~\"xfs|ext4\"})*100"
+
+[[items]]
+metrics = "disk_read_speed_avg_KB_persec"
+promql = "avg_over_time(rate(node_disk_read_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024"
+
+[[items]]
+metrics = "disk_read_speed_max_KB_persec"
+promql = "max_over_time(rate(node_disk_read_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024"
+
+[[items]]
+metrics = "disk_write_speed_avg_KB_persec"
+promql = "avg_over_time(rate(node_disk_written_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024"
+
+[[items]]
+metrics = "disk_write_speed_max_KB_persec"
+promql = "max_over_time(rate(node_disk_written_bytes_total{device=\"vdb\"}[5m])[24h:1s])/1024"
+
+[[items]]
+metrics = "network_in_speed_MB_persec"
+promql = "avg_over_time(rate(node_network_receive_bytes_total{device=\"eth0\"}[5m])[24h:1s])/1024/1024"
+
+[[items]]
+metrics = "network_out_speed_MB_persec"
+promql = "avg_over_time(rate(node_network_transmit_bytes_total{device=\"eth0\"}[5m])[24h:1s])/1024/1024"
+
+[[items]]
+metrics = "context_switches_persec_K"
+promql = "rate(node_context_switches_total[5m])/1000"
+
+[[items]]
+metrics = "socket_nums_K"
+promql = "node_sockstat_sockets_used/1000"
+
+[output]
+project ="东莞"
+filename = "巡检报告.xlsx"
+sheetname = "Sheet1"
+title = ["服务器IP","CPU（使用率均值）","CPU（使用率峰值）","内存（使用率均值）","内存（使用率峰值）","磁盘（使用率）","磁盘I/O（读速率均值）","磁盘I/O（读速率峰值）","磁盘I/O（写速率均值）","磁盘I/O（写速率峰值）","网络带宽（下行均值）","网络带宽（上行均值）","每秒上下文切换次数","socket使用量"]
+
+[logconfig]
+level = "debug"
+logfile = "./logs/node_metrics.log"
+maxsize = 0
+maxage = 29
+maxbackups = 4
+
+

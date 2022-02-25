@@ -1,3 +1,6 @@
 {"level":"DEBUG","time":"2022-02-24T22:05:45.234+0800","caller":"node_metrics/main.go:19","msg":"大家好，日志展示"}
 {"level":"DEBUG","time":"2022-02-24T22:12:33.249+0800","caller":"node_metrics/main.go:25","msg":"大家好，日志展示"}
 {"level":"INFO","time":"2022-02-24T22:12:33.249+0800","caller":"test/111.go:6","msg":"test"}
+{"level":"INFO","time":"2022-02-25T10:11:22.494+0800","caller":"node_metrics_go/main.go:46","msg":"test"}
+{"level":"INFO","time":"2022-02-25T11:48:29.139+0800","caller":"node_metrics_go/main.go:49","msg":"test:","a":"1"}
+{"level":"INFO","time":"2022-02-25T11:48:59.191+0800","caller":"node_metrics_go/main.go:49","msg":"test:%s\n","a":"1"}

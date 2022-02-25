@@ -1,14 +1,5 @@
 package setting
 
-import (
-	"path"
-	"strings"
-
-	"github.com/spf13/viper"
-)
-
-var Config = NewMonitorConfig()
-
 type MonitorConfig struct {
 	Address   string         `toml:"address"`
 	TimeOut   int            `toml:"timeout"`
@@ -70,25 +61,11 @@ type MonitorOutput struct {
 	Title     []string `toml:"title"`
 }
 
-// 将配置文件映射到全局变量Config中
-func InitConfig(filePath string, fileName string) error {
-	viper.AddConfigPath(filePath)
-	viper.SetConfigName(fileName)
-	viper.SetConfigType(strings.TrimLeft(path.Ext(fileName), "."))
-
-	err := viper.ReadInConfig()
+// 将配置文件数据映射到结构体中
+func (s *Setting) ReadConfig(value interface{}) error {
+	err := s.vp.Unmarshal(value)
 	if err != nil {
 		return err
 	}
-
-	err = viper.Unmarshal(Config)
-	if err != nil {
-		return err
-	} // // 监听配置文件更新
-	// viper.WatchConfig()
-	// viper.OnConfigChange(func(e fsnotify.Event) {
-	// 	viper.Unmarshal(conf)
-	// })
-
 	return nil
 }

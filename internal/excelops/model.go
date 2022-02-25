@@ -1,10 +1,11 @@
 package excelops
 
 import (
-	. "node_metrics_go/pkg/log"
+	"node_metrics_go/global"
 	"strconv"
 
 	"github.com/xuri/excelize/v2"
+	"go.uber.org/zap"
 )
 
 type Cell struct {
@@ -50,7 +51,7 @@ func NewCell(ismerge bool, xzone []string, yzone []int, xwidth, yheight []float6
 func (cl *Cell) SetWidth(sheetname string, f *excelize.File) {
 	for i, strX := range cl.Xzone {
 		if err := f.SetColWidth(sheetname, strX, strX, cl.Xwidth[i]); err != nil {
-			Log.Fatal("when setting width of cell occur error, error info: ", err)
+			global.Logger.Fatal("when setting width of cell occur error, error info: ", zap.Error(err))
 		}
 	}
 }
@@ -58,7 +59,7 @@ func (cl *Cell) SetWidth(sheetname string, f *excelize.File) {
 func (cl *Cell) SetHeight(sheetname string, f *excelize.File) {
 	for i, intY := range cl.Yzone {
 		if err := f.SetRowHeight(sheetname, intY, cl.Yheight[i]); err != nil {
-			Log.Fatal("when setting height of cell occur error, error info: ", err)
+			global.Logger.Fatal("when setting height of cell occur error, error info: ", zap.Error(err))
 		}
 	}
 }
@@ -67,7 +68,7 @@ func (cl *Cell) MergeCell(sheetname string, f *excelize.File) {
 	if cl.IsMerge {
 		if err := f.MergeCell(sheetname, cl.Xzone[0]+strconv.Itoa(cl.Yzone[0]),
 			cl.Xzone[len(cl.Xzone)-1]+strconv.Itoa(cl.Yzone[len(cl.Yzone)-1])); err != nil {
-			Log.Fatal("when setting merge of cell occur error, error info: ", err)
+			global.Logger.Fatal("when setting merge of cell occur error, error info: ", zap.Error(err))
 		}
 	}
 }
@@ -76,13 +77,13 @@ func (cl *Cell) SetFormat(sheetname string, f *excelize.File) {
 	err := f.SetCellStyle(sheetname, cl.Xzone[0]+strconv.Itoa(cl.Yzone[0]),
 		cl.Xzone[len(cl.Xzone)-1]+strconv.Itoa(cl.Yzone[len(cl.Yzone)-1]), cl.Format)
 	if err != nil {
-		Log.Fatal("when setting format of cell occur error, error info: ", err)
+		global.Logger.Fatal("when setting format of cell occur error, error info: ", zap.Error(err))
 	}
 }
 func (cl *Cell) SetValue(sheetname string, f *excelize.File) {
 	err := f.SetCellValue(sheetname, cl.Xzone[0]+strconv.Itoa(cl.Yzone[0]), cl.Content)
 	if err != nil {
-		Log.Fatal("when setting format of cell occur error, error info: ", err)
+		global.Logger.Fatal("when setting format of cell occur error, error info: ", zap.Error(err))
 	}
 }
 

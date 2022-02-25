@@ -10,12 +10,12 @@ require (
 require (
 	github.com/golang/mock v1.6.0
 	github.com/q191201771/naza v0.30.0
-	github.com/sirupsen/logrus v1.6.0
 	github.com/xuri/excelize/v2 v2.5.0
 )
 
 require (
 	github.com/natefinch/lumberjack v2.0.0+incompatible
+	github.com/spf13/cobra v1.3.0
 	github.com/spf13/viper v1.10.1
 	go.uber.org/zap v1.21.0
 )
@@ -26,10 +26,9 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
-	github.com/kr/pretty v0.2.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect

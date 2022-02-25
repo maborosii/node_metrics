@@ -19,16 +19,17 @@ package excelops
 
 import (
 	"fmt"
-	. "node_metrics_go/pkg/log"
+	"node_metrics_go/global"
 
 	"github.com/xuri/excelize/v2"
+	"go.uber.org/zap"
 )
 
 // 初始化单元格格式
 func GetStyle(f *excelize.File, styleconfig string) int {
 	style, err := f.NewStyle(styleconfig)
 	if err != nil {
-		Log.Fatal("when init style of cell occur error, error info: ", err)
+		global.Logger.Fatal("when init style of cell occur error, error info: ", zap.Error(err))
 	}
 	return style
 }

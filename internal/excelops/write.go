@@ -32,13 +32,13 @@ import (
 // 	}
 // )
 
-func WriteExcel(f *excelize.File, sheetname string, data [][]string) {
+func WriteExcel(f *excelize.File, sheetname string, title []string, data [][]string) {
 
 	styleTitle := GetStyle(f, titleStyle)
 	styleContent := GetStyle(f, contentStyle)
 
 	// 写入标题
-	for _, cell := range GetTitle(styleTitle, titleContent) {
+	for _, cell := range GetTitle(styleTitle, title) {
 		Formatting(cell, sheetname, f)
 		Writing(cell, sheetname, f)
 	}

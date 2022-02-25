@@ -1,7 +1,7 @@
 package etl
 
 import (
-	. "node_metrics_go/pkg/log"
+	"node_metrics_go/global"
 )
 
 func ShuffleResult(series int, storeResults *StoreResults) {
@@ -38,7 +38,7 @@ func ShuffleResult(series int, storeResults *StoreResults) {
 			case "socket_nums_K":
 				storeResults.CreateOrModifyStoreResults(result[0], WithSocketNums(result[1]+"K"))
 			default:
-				Log.Info("Default")
+				global.Logger.Info("Default")
 			}
 		}
 	}
