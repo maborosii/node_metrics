@@ -24,9 +24,6 @@ func NewQueryResult() func(label string, value model.Value) *QueryResult {
 	}
 }
 
-// func (q *QueryResult) Print() {
-// 	fmt.Printf("label:%s,\ndata:%v\n", q.label, q.value)
-// }
 func (q *QueryResult) GetLabel() string {
 	return q.label
 }

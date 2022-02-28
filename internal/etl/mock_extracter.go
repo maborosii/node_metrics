@@ -2,6 +2,7 @@
 // Source: /home/bonbon/go_dep/pkg/mod/github.com/prometheus/common@v0.32.1/model/value.go
 
 // Package etl is a generated GoMock package.
+// mock prometheus api提供的返回值
 package etl
 
 import (

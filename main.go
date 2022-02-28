@@ -15,24 +15,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// func main() {
-// 	defer log.Logger.Sync()
-// 	test.Print()
-// }
-
-// func init() {
-// 	// 传入配置文件路径，加载配置文件,
-// 	if err := setting.InitConfig("conf", "monitor.toml"); err != nil {
-// 		fmt.Printf("load config from file failed, err:%v\n", err)
-// 		return
-// 	}
-// 	fmt.Println("config.ini配置加载成功", setting.Config.GetAddress())
-
-// 	logConfig := setting.Config.GetLogConfig()
-// 	log.InitLogger(logConfig)
-// 	log.Logger.Debug("大家好，日志展示")
-// }
-
 func init() {
 	// 获取配置文件
 	var err error
@@ -54,12 +36,9 @@ func init() {
 }
 
 func main() {
+	// 手动将缓冲区日志内容刷入
+	defer global.Logger.Sync()
 
-	// fmt.Println(global.MonitorSetting.GetAddress())
-	// fmt.Println(global.MonitorSetting.GetTimeOut())
-	// fmt.Println(*global.MonitorSetting.GetLogConfig())
-	// fmt.Println(global.MonitorSetting.GetMonitorItems())
-	// fmt.Println(global.MonitorSetting.GetOutputFileAndSheetName())
 	// 存储最终指标
 	var storeResults = etl.NewStoreResults()
 
@@ -95,6 +74,7 @@ func main() {
 
 }
 
+// 根绝配置文件位置读取配置文件
 func setupSetting() error {
 	setting, err := setting.NewSetting(global.ConfigPath)
 	if err != nil {
@@ -108,6 +88,7 @@ func setupSetting() error {
 	return nil
 }
 
+// 初始化日志配置
 func setupLogger() error {
 	logConfig := global.MonitorSetting.GetLogConfig()
 	err := logger.InitLogger(logConfig)

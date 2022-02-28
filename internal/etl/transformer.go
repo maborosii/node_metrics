@@ -4,6 +4,7 @@ import (
 	"node_metrics_go/global"
 )
 
+// 将返回的结果进行转换
 func ShuffleResult(series int, storeResults *StoreResults) {
 	defer WgReceiver.Done()
 	for i := 0; i < series; i++ {

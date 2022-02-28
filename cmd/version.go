@@ -9,16 +9,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// func GetVersion() {
-// 	// 添加编译信息
-// 	v := flag.Bool("v", false, "show bin info")
-// 	flag.Parse()
-// 	if *v {
-// 		_, _ = fmt.Fprint(os.Stderr, bininfo.StringifyMultiLine())
-// 		os.Exit(1)
-// 	}
-// }
-
 // 定义子命令行的主要参数
 var versionCmd = &cobra.Command{
 	Use:   "version",   // 子命令的标识
