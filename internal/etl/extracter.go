@@ -31,7 +31,7 @@ func (q *QueryResult) GetValue() model.Value {
 	return q.value
 }
 
-// patter: 正则表达式
+// pattern: 正则表达式
 // 抽取ip，label，metrics
 func (q *QueryResult) CleanValue(pattern string) [][]string {
 	var midResult = [][]string{}
